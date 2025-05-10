@@ -1,0 +1,42 @@
+---
+- name: Configure OpenVPN client for TUN/TAP
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - openvpn
+        - iperf3
+        - selinux-utils
+
+    - name: Disable SELinux
+      command: setenforce 0
+      ignore_errors: yes
+
+    - name: Copy static key from server
+      copy:
+        src: /home/vagrant/ansible/static.key
+        dest: /etc/openvpn/static.key
+        mode: '0600'
+
+    - name: Copy client configuration for TAP
+      copy:
+        src: files/client.conf
+        dest: /etc/openvpn/server.conf
+        mode: '0644'
+
+    - name: Copy systemd service file
+      copy:
+        src: files/openvpn@.service
+        dest: /etc/systemd/system/openvpn@.service
+        mode: '0644'
+
+    - name: Enable and start OpenVPN service
+      systemd:
+        name: openvpn@server
+        enabled: yes
+        state: started
